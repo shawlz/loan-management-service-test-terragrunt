@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# Check if Gitleaks is installed.
+if ! command -v gitleaks &> /dev/null
+then
+    printf "\e[31mGitleaks is not installed. Gitleaks is required to run this pre-commit hook.\e[0m"
+    echo "To install Gitleaks see https://github.com/zricethezav/gitleaks#installing"
+    echo "You can also download the binary file for your OS distribution from the link: https://github.com/zricethezav/gitleaks/releases"
+    echo "Make sure the binary file location is added to system path or environment."
+    exit 1
+fi
+
+gitleaks protect --staged -v

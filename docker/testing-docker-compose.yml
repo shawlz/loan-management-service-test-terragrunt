@@ -1,0 +1,53 @@
+version: '3.9'
+services:
+  template-api:
+    build:
+      dockerfile: Dockerfile
+      context: ../
+      target: development
+    env_file:
+      - ./config/api-testing-configs.env
+      - ./config/data-configs.env
+    command: /bin/sh -c "yarn add jest && yarn run migration:run && yarn run test:cov"
+    expose:
+      - "80"
+      - "81"
+    ports:
+      - "81:81"
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ../coverage:/app/coverage
+  postgres:
+    image: postgres:14.1-alpine3.15
+    restart: always
+    env_file:
+      - ./config/database.env # configure postgres
+    expose:
+      - "5432"
+      - "5433"
+    ports:
+      - "5433:5432"
+    # volumes:
+    #   - db_data:/var/lib/postgresql/data
+  redis:
+    image: redis
+    restart: always
+    env_file:
+      - ./config/redis.env
+    expose:
+      - "6379"
+      - "6378"
+    ports:
+      - "6378:6379"
+    command:
+      - /bin/sh
+      - -c
+      # - Double dollars, so that the variable is not expanded by Docker Compose
+      # - Surround by quotes, so that the shell does not split the password
+      # - The ${variable:?message} syntax causes shell to exit with a non-zero
+      #   code and print a message, when the variable is not set or empty
+      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+volumes:
+  db_data:
