@@ -13,8 +13,8 @@ image:
 imagePullSecrets: []
 
 # Always set the overrides. Set to the name of the service/deployment
-nameOverride: "nestjs-template"
-fullnameOverride: "nestjs-template"
+nameOverride: ""
+fullnameOverride: ""
 
 # Use init Container to run migrations or any startup scripts
 initContainer:
@@ -23,6 +23,9 @@ initContainer:
   command: []
   args: []
   volumeMounts: []
+
+# Use sidecars to run additional containers
+sidecars: []
 
 # Basic App Deployment Configuration
 app:
@@ -34,9 +37,9 @@ app:
     name: dev
 
   secrets:
-    enabled: true
+    enabled: false
     nestjsEnv:
-      enabled: true
+      enabled: false
       secretKeyRef: nestjs-env
       mountPath: /etc/nestjs/.env
       envPath: /etc/nestjs/.env/.env.test
@@ -100,7 +103,7 @@ datadog:
   apiKey: 123
   tags: type:api,framework:nestjs,language:javascript
   source: nestjs
-  service: nestjs-template
+  service: helloworld
   logsInjectionEnabled: true
   profilingEnabled: true
   appsecEnabled: false
@@ -114,14 +117,56 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: "gsa-wi"
-  configConnector:
-    # Whether or not ConfigConnector deletes the GCP service account when the resource is deleted
-    deletionPolicy: none
-    # GCP Project ID
-    projectId: "test-project"
-    # Additional ConfigConnector Annotations
+  # The GCP service account email.
+  # Not needed if you want to create a GCP service account using ConfigConnector
+  IAMServiceAccount: ""
+  # Annotate the kubernetes service account with the GCP IAM service account.
+  annotateIAMServiceAccount: false
+
+configConnector:
+  enabled: false
+  # Whether or not ConfigConnector deletes the GCP service account when the resource is deleted
+  deletionPolicy: abandon
+  # GCP Project ID
+  projectId: "test-project"
+  # Create the GCP IAM service account
+  # This will create the service account using the chart computed service account name
+  IAMServiceAccount:
+    create: true
+    # Additional ConfigConnector Annotations for IAMServiceAccount resource kind
     annotations: {}
-  createWorkloadIdentity: false
+  # Create the workload Identity on GCP
+  createWorkloadIdentity: true
+  # IAMPolicyMember resources
+  IAMPolicyMember:
+    cloudSQLClientRole:
+      enabled: true
+      instanceProjectId: "database-project"
+    # Additional ConfigConnector Annotations for IAMPolicyMember resource kind
+    annotations: {}
+    additionalPolicies: []
+      # See https://cloud.google.com/config-connector/docs/reference/overview
+      # - name: "test-resource-name" # ConfigConnector resource
+      #   kind: IAMServiceAccount
+      #   external: projects/test-external-project # External resources not created with configConnector
+      #   namespace: "test-namespace"
+      #   role: roles/TestResourceRole
+  StorageBucket:
+    enabled: false
+    name: ""
+    annotations:
+      cnrm.cloud.google.com/force-destroy: "false"
+    lifecycleRule: []
+      # - action:
+      #   type: Delete
+      #  condition:
+      #   age: 7
+      #   withState: ANY
+    cors: []
+      # - origin: ["http://example.appspot.com"]
+      #   responseHeader: ["Content-Type"]
+      #   method: ["GET", "HEAD", "DELETE"]
+      #   maxAgeSeconds: 3600
 
 podAnnotations: {}
 
@@ -138,7 +183,7 @@ securityContext:
 
 service:
   type: ClusterIP
-  port: 5000
+  port: 3000
   exposeport: 80
 
 ingress:
